@@ -1,3 +1,5 @@
+import json
+
 class TopProduct():
     def __init__(self):
         self.top = {} # pid : (score, status_default)
@@ -8,8 +10,8 @@ class TopProduct():
             (pid in self.top and self.top[pid]['d'] == True)):
             self.top[pid] = {'s' : score, 'd' : default}
 
-    def get(self):
-        return sorted(self.top.items(), key=lambda x : x[1]['s'], reverse=True)
+    def getJson(self):
+        return json.dumps(self.top)
 
     def getTop(self, top_n = 5):
-        return self.get()[0:top_n]
+        return ','.join(list(map(lambda x : str(x[0]), sorted(self.top.items(), key=lambda x : x[1]['s'], reverse=True)[0:top_n])))
