@@ -1,6 +1,6 @@
 
-path_user = '/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples/user.tsv'
-path_product = "/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples/product.tsv"
+path_user = '/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples_example/user.tsv'
+path_product = "/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples_example/product.tsv"
 
 # File Product
 try:
@@ -22,8 +22,7 @@ try:
     data_product = dict(map(
         lambda x : tuple( (lambda y : [int(y[0]),int(y[1])] ) (x.split('\t')) ),
         file_product.read().strip().split("\n")
-    ))
-
+    )) # pid, score
 except:
     print("===== Error =====")
     print("Sorry your format file of 'product_score' was wrong.")
@@ -42,10 +41,16 @@ func_sc_user_pref = lambda sc_user_product, timestamps : sc_user_product * pow(0
 func_sc_rec_product = lambda sc_user_pref, sc_product : (sc_user_pref * sc_product) + sc_product
 
 
+from TopProduct import TopProduct
+import copy
+
+# Default top Product
+default_top_product = TopProduct()
+for p in data_product:
+    default_top_product.add(pid = p, score = func_sc_rec_product(0, data_product[p]), default=True)
+
 
 # Process the user data
-from TopProduct import TopProduct
-
 error_process = 0
 total_process = 0
 data_process = {}
@@ -55,7 +60,7 @@ for fu in file_user:
         uid = u[0]
         pid = u[1]
         if(uid not in data_process):
-            data_process[uid] = TopProduct(5)
+            data_process[uid] = copy.deepcopy(default_top_product)
         data_process[uid].add(pid = pid, score = func_sc_rec_product(func_sc_user_pref(u[2], u[3]), data_product[pid])) 
     except Exception as e:
         print(e)
@@ -65,7 +70,7 @@ for fu in file_user:
 
 for dp in data_process:
     print("User : %s" %(dp))
-    for d in data_process[dp].get():
+    for d in data_process[dp].getTop(5):
         print(d)
     
 
