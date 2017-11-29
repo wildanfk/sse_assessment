@@ -82,8 +82,8 @@ def initialize(path_user, path_product, path_top5_db, path_metadata_db):
 
 
 if __name__ == '__main__':
-    path_user = '/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples_example/user.tsv'
-    path_product = "/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples_example/product.tsv"
+    path_user = '/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples/user.tsv'
+    path_product = "/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples/product.tsv"
     
     dir_db = './db/'
     path_top5_db = "%s/top5.db" % (dir_db)
@@ -119,13 +119,14 @@ if __name__ == '__main__':
         print("====================================================")
         print("type 'exit' for exit from application")
         uid = input("Search top 5 recomendation product for user : ")
-        top5_product = top5_db.get_top5_product(uid)
-        if(top5_product == None):
-            print("sorry we couldn't found user %s" %(uid))
-        else:
-            print("recomended product for user %s are : " %(uid))
-            for p in top5_product.split(","):
-                print(p)
+        if(uid != 'exit'):
+            top5_product = top5_db.get_top5_product(uid)
+            if(top5_product == None):
+                print("sorry we couldn't found user %s" %(uid))
+            else:
+                print("recomended product for user %s are : " %(uid))
+                for p in top5_product.split(","):
+                    print(p)
 
     top5_db.close()
 
