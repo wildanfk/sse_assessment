@@ -23,6 +23,7 @@ class DatabaseTopProduct(Database):
 
     def insert(self, list_data):
         self.c.executemany('insert into top_product values (?,?,?)', list_data)
+        self.con.commit()
 
     def get_top5_product(self, uid):
         result = self.c.execute('select top5 from top_product where uid = ?', (uid,)).fetchone()
@@ -43,6 +44,7 @@ class DatabaseMetadata(Database):
             hashlib.md5(open(path_user,'rb').read()).hexdigest(),
             hashlib.md5(open(path_product,'rb').read()).hexdigest()
         ))
+        self.con.commit()
 
     def isMetadataExists(self, path_user, path_product):
         exists = self.c.execute('select 1 from metadata where md5_user = ? and md5_product = ? ', (
