@@ -1,4 +1,7 @@
 import os
+import time
+
+start_time = time.time()
 
 path_file_age = '/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples/age.txt'
 
@@ -31,3 +34,8 @@ for age in sorted(data_age.keys()):
 
 file_age.close()
 file_sorted_age.close()
+
+print("Total Data       : %s" %(total_process))
+print("Total Data Error : %s" %(error_process))
+print("Total Time       : %s seconds" % (time.time() - start_time) )
+
