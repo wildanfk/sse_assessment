@@ -21,7 +21,11 @@ class DatabaseTopProduct(Database):
         )
     ''')
 
-    def insert(self, list_data):
+    def insert(self, uid, data_json, top5):
+        self.c.execute('insert into top_product values (?,?,?)', (uid, data_json, top5))
+        self.con.commit()
+
+    def insert_bulk(self, list_data):
         self.c.executemany('insert into top_product values (?,?,?)', list_data)
         self.con.commit()
 
@@ -35,21 +39,24 @@ class DatabaseMetadata(Database):
         self.c.execute('''
             create table metadata (
                 md5_user varchar(32),
-                md5_product varchar(32)
+                md5_product varchar(32),
+                shard integer
             )
         ''')
 
-    def insert(self, path_user, path_product):
-        self.c.execute('insert into metadata values (?,?)', (
+    def insert(self, path_user, path_product, shard):
+        self.c.execute('insert into metadata values (?,?,?)', (
             hashlib.md5(open(path_user,'rb').read()).hexdigest(),
-            hashlib.md5(open(path_product,'rb').read()).hexdigest()
+            hashlib.md5(open(path_product,'rb').read()).hexdigest(),
+            shard
         ))
         self.con.commit()
 
-    def isMetadataExists(self, path_user, path_product):
-        exists = self.c.execute('select 1 from metadata where md5_user = ? and md5_product = ? ', (
+    def isMetadataExists(self, path_user, path_product, shard):
+        exists = self.c.execute('select 1 from metadata where md5_user = ? and md5_product = ? and shard = ?', (
             hashlib.md5(open(path_user,'rb').read()).hexdigest(),
-            hashlib.md5(open(path_product,'rb').read()).hexdigest()
+            hashlib.md5(open(path_product,'rb').read()).hexdigest(),
+            shard
         ,)).fetchone()
         return True if(exists) else False
 
