@@ -22,7 +22,7 @@ class DatabaseTopProduct(Database):
     ''')
 
     def insert(self, uid, data_json, top5):
-        self.c.execute('insert into top_product values (?,?,?)', (uid, data_json, top5))
+        self.c.execute('insert or replace into top_product values (?,?,?)', (uid, data_json, top5))
         self.con.commit()
 
     def insert_bulk(self, list_data):
@@ -31,6 +31,10 @@ class DatabaseTopProduct(Database):
 
     def get_top5_product(self, uid):
         result = self.c.execute('select top5 from top_product where uid = ?', (uid,)).fetchone()
+        return result[0] if(result) else None
+
+    def get_json_product(self, uid):
+        result = self.c.execute('select data_json from top_product where uid = ?', (uid,)).fetchone()
         return result[0] if(result) else None
 
 
