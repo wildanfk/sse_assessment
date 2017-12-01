@@ -3,6 +3,7 @@ from TopProductDB import DatabaseTopProduct, DatabaseMetadata
 from datetime import datetime, timezone
 import copy
 import os
+import time
 
 
 data_conn_path = []
@@ -50,6 +51,7 @@ class InitTopProduct():
         self.data_process = {}
 
     def initialize(self, path_user, path_product, path_metadata_db, total_shard, max_user_data_process):
+        start_time = time.time()
         # File Product
         try:
             file_product = open(path_product, 'r')
@@ -116,6 +118,11 @@ class InitTopProduct():
 
         # Store at metadata
         store_metadata(path_metadata_db, path_user, path_product, total_shard)
+
+        # Information
+        print("Total Data Processed : %s" %(total_process))
+        print("Total Data Error     : %s" %(error_process))
+        print("Total Time           : %s seconds" % (time.time() - start_time) )
 
 
     def collect_data_process(self, user_data, product_data, default_top_product):
