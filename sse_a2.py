@@ -1,15 +1,21 @@
 import os
 import time
 import subprocess
+import sys
 
 start_time = time.time()
 
-path_file_age = '/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples/age.txt'
+arg = sys.argv
+if(len(arg) != 2):
+    print("Please run the scripts with argument e.g : ")
+    print("python3 ss_a2.py /home/foo/Documents/age.txt")
+    exit()
 
+path_file_age = arg[1]
 try:
     file_age = open(path_file_age, 'r')
 except:
-    print("No such file : '%s'" %(path_product))
+    print("No such file : '%s'" %(path_file_age))
     exit()
 
 print("\nPlease wait on process sort the data...")
