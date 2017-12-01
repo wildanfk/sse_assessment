@@ -6,6 +6,7 @@ import os
 import time
 import threading
 from queue import Queue
+import sys
 
 
 data_conn_path = []
@@ -189,8 +190,14 @@ class InitTopProduct():
 
 
 if __name__ == '__main__':
-    path_user = '/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples/user.tsv'
-    path_product = "/Users/wildanfk/Documents/other_workspace/sse/sse_data_sample/samples/product.tsv"
+    arg = sys.argv
+    if(len(arg) != 3):
+        print("Please run the scripts with argument e.g : ")
+        print("python3 ss_a1.py /home/foo/Documents/user_preference_file.tsv /home/foo/Documents/product_score_file.tsv")
+        exit()
+
+    path_user = arg[1]
+    path_product = arg[2]
     
     # Configuration Database and process
     dir_db = './db/'
