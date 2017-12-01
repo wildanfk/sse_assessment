@@ -75,7 +75,7 @@ for i in range(0, len(path_part_arr)):
 
     if(old_temp):
         subprocess.call("rm %s" %(old_temp), shell=True)
-    subprocess.call("rm %s" %(path_part_arr[i]), shell=True)
+        subprocess.call("rm %s" %(path_part_arr[i]), shell=True)
 
 print("Create data sort file successed.\n")
 
