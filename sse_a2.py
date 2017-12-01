@@ -32,7 +32,7 @@ print("Process sort the data successed.")
 print("\nPlease wait on process create data sort file...")
 path_file_sorted_age = "%s/sorted_%s" %(os.path.dirname(path_file_age), os.path.basename(path_file_age))
 total_data = total_process - error_process
-max_data_per_file = 700000
+max_data_per_file = 1000000
 
 total_part = int(total_data / max_data_per_file) + (1 if(total_data % max_data_per_file > 0) else 0)
 format_part = "{:0%sd}" %(len(str(total_part)))
