@@ -1,5 +1,6 @@
 # How to Run Assessment Scripts
-please use unix system (osx or linux).
+- Please use unix system (osx or linux)
+- Please use python 3 
 
 ## Task 01
 python3 ss_a1.py /home/foo/Documents/user_preference_file.tsv /home/foo/Documents/product_score_file.tsv
