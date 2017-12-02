@@ -196,6 +196,10 @@ if __name__ == '__main__':
     # Info file
     print("path_user    : %s" %(path_user))
     print("path_product : %s" %(path_product))
+
+    if(path_user == path_product):
+        print("Can't use same resources")
+        exit()
     
     # Configuration Database and process
     dir_db = './db/'
