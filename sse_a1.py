@@ -149,7 +149,8 @@ class InitTopProduct():
         # Scoring for search top product
         for user_data in user_data_arr:
             pid = user_data[1]
-            user_top_product.add(pid = pid, score = func_sc_rec_product(func_sc_user_pref(user_data[2], user_data[3]), product_data_arr[pid])) 
+            if(pid in product_data_arr):
+                user_top_product.add(pid = pid, score = func_sc_rec_product(func_sc_user_pref(user_data[2], user_data[3]), product_data_arr[pid])) 
 
         # Store to database
         conn.insert(uid, user_top_product.getJson(),user_top_product.getTop(5))
