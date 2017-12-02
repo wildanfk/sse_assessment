@@ -109,6 +109,7 @@ class InitTopProduct():
             data_user_process[uid].append(u)
 
             if(len(data_user_process) >= self.max_user_process):
+                print("Process data on : %s rows" %(total_process))
                 for dup in data_user_process:
                     self.qworker.put((dup, data_user_process[dup], data_product, default_top_product))
                 self.qworker.join()
@@ -117,6 +118,7 @@ class InitTopProduct():
         # Close file
         file_user.close()
 
+        print("Process data on : %s rows" %(total_process))
         for dup in data_user_process:
             self.qworker.put((dup, data_user_process[dup], data_product, default_top_product))
         self.qworker.join()
@@ -126,8 +128,9 @@ class InitTopProduct():
         store_metadata(path_metadata_db, path_user, path_product, total_shard)
 
         # Information
-        print("Total Data Processed : %s" %(total_process))
-        print("Total Data Error     : %s" %(error_process))
+        print()
+        print("Total Data Processed : %s rows" %(total_process))
+        print("Total Data Error     : %s rows" %(error_process))
         print("Total Time           : %s seconds" % (time.time() - start_time) )
 
 
