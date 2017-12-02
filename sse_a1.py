@@ -10,7 +10,6 @@ import sys
 
 
 data_conn_path = []
-data_conn = []
 
 def build_path_data_connection(dir_db, total_shard):
     format_shard = "{:0%sd}" %(len(str(total_shard)))
@@ -18,28 +17,20 @@ def build_path_data_connection(dir_db, total_shard):
         path_db = "%s/top5_shard%s.db" %(dir_db, format_shard.format(i))
         data_conn_path.append(path_db)
 
-def open_data_connection():
-    for path in data_conn_path:
-        data_conn.append(DatabaseTopProduct(path))
-
-def init_data_connection():
-    for db in data_conn:
-        db.create_table()
-
-def close_data_connection():
-    for db in data_conn:
-        db.close()
-
 def remove_path_data_connection():
     for path in data_conn_path:
         if(os.path.exists(path)):
             os.remove(path)
 
-def get_data_connection(uid, total_shard):
-    return data_conn[(uid % total_shard)]
-
 def get_path_data_connection(uid, total_shard):
     return data_conn_path[(uid % total_shard)]
+
+def init_data_connection():
+    for path in data_conn_path:
+        conn = DatabaseTopProduct(path)
+        conn.create_table()
+        conn.close()
+
 
 def store_metadata(path_db, path_user_file, path_product_file, shard):
     metadata_db = DatabaseMetadata(path_db)
@@ -54,27 +45,25 @@ func_sc_rec_product = lambda sc_user_pref, sc_product : (sc_user_pref * sc_produ
 
 
 class InitTopProduct():
-    def __init__(self, total_worker):
-        self.data_process = {}
+    def __init__(self, total_shard, total_worker, max_user_process):
         self.q = Queue()
+        self.total_shard = total_shard
+        self.max_user_process = max_user_process
         self.total_worker = total_worker
-        self.qcollect = Queue()
-        self.qstore = Queue()
+        self.qworker = Queue()
 
-    def initialize(self, path_user, path_product, path_metadata_db, total_shard, max_data_process):
+        # Create worker
+        for i in range(self.total_worker):
+            t = threading.Thread(target=self.worker_process_data)
+            t.daemon = True  # thread dies when main thread (only non-daemon thread) exits.
+            t.start()
+
+    def initialize(self, path_user, path_product, path_metadata_db):
         start_time = time.time()
-        # File Product
-        try:
-            file_product = open(path_product, 'r')
-        except:
-            print("No such file : '%s'" %(path_product))
-            exit()
-        # File User
-        try:
-            file_user = open(path_user, 'r')
-        except:
-            print("No such file : '%s'" %(path_user))
-            exit()
+
+        # Open file
+        file_user = open(path_user, 'r')
+        file_product = open(path_product, 'r')
 
         # Store the product score into memory
         data_product = None
@@ -98,48 +87,40 @@ class InitTopProduct():
         for p in data_product:
             default_top_product.add(pid = p, score = func_sc_rec_product(0, data_product[p]), default=True)
 
-        # Create worker
-        for i in range(total_worker):
-            t = threading.Thread(target=self.worker_collect)
-            t.daemon = True  # thread dies when main thread (only non-daemon thread) exits.
-            t.start()
-
-        for i in range(total_worker):
-            t = threading.Thread(target=self.worker_store)
-            t.daemon = True  # thread dies when main thread (only non-daemon thread) exits.
-            t.start()
 
         # Process the user data for find score
         error_process = 0
         total_process = 0
+        data_user_process = {}
         for fu in file_user:
             try:
                 u = func_user_data(fu.strip().split('\t')) 
+                total_process += 1
             except Exception as e:
                 u = None
                 error_process += 1
-            total_process += 1
-
+                total_process += 1
+                continue
+            
             # Collect data process
-            if(u):
-                self.qcollect.put((u, data_product, default_top_product, total_shard))
-                if(total_process % max_data_process == 0):
-                    print("Processed Data : %s " %(total_process))
-                    self.qcollect.join()
-                    # Store at database
-                    for uid in self.data_process:
-                        self.qstore.put((uid, self.data_process[uid], total_shard))
-                    self.qstore.join()
-                    self.data_process = {}
+            uid = u[0]
+            if(uid not in data_user_process):
+                data_user_process[uid] = []
+            data_user_process[uid].append(u)
+
+            if(len(data_user_process) >= self.max_user_process):
+                for dup in data_user_process:
+                    self.qworker.put((dup, data_user_process[dup], data_product, default_top_product))
+                self.qworker.join()
+                data_user_process = {}
 
         # Close file
         file_user.close()
 
-        self.qcollect.join()
-        # Store at database
-        for uid in self.data_process:
-            self.qstore.put((uid, self.data_process[uid], total_shard))
-        self.data_process = {}
+        for dup in data_user_process:
+            self.qworker.put((dup, data_user_process[dup], data_product, default_top_product))
+        self.qworker.join()
+        data_user_process = {}
 
         # Store at metadata
         store_metadata(path_metadata_db, path_user, path_product, total_shard)
@@ -150,42 +131,36 @@ class InitTopProduct():
         print("Total Time           : %s seconds" % (time.time() - start_time) )
 
 
-    def collect_data_process(self, user_data, product_data, default_top_product, total_shard):
-        uid = user_data[0]
-        pid = user_data[1]
-        if(uid not in self.data_process):
-            conn = DatabaseTopProduct(get_path_data_connection(uid, total_shard))
-            data_json = conn.get_json_product(uid)
-            conn.close()
-            if(data_json):
-                self.data_process[uid] = TopProduct()
-                self.data_process[uid].loadJson(data_json)
-            else:
-                self.data_process[uid] = copy.deepcopy(default_top_product)
-        self.data_process[uid].add(pid = pid, score = func_sc_rec_product(func_sc_user_pref(user_data[2], user_data[3]), product_data[pid])) 
 
-    def store_data_process(self, uid, data, total_shard):
-        conn = DatabaseTopProduct(get_path_data_connection(uid, total_shard))
-        conn.insert(uid, data.getJson(),data.getTop(5))
+    def process_data(self, uid, user_data_arr, product_data_arr, default_top_product):
+        # Process data per-user
+        # Init user top product
+        conn = DatabaseTopProduct(get_path_data_connection(uid, self.total_shard))
+        data_json = conn.get_json_product(uid)
+        if(data_json):
+            user_top_product = TopProduct()
+            user_top_product.loadJson(data_json)
+        else:
+            user_top_product = copy.deepcopy(default_top_product)
+
+        # Scoring for search top product
+        for user_data in user_data_arr:
+            pid = user_data[1]
+            user_top_product.add(pid = pid, score = func_sc_rec_product(func_sc_user_pref(user_data[2], user_data[3]), product_data_arr[pid])) 
+
+        # Store to database
+        conn.insert(uid, user_top_product.getJson(),user_top_product.getTop(5))
         conn.close()
 
-    def worker_collect_function(self, param):
-        self.collect_data_process(param[0], param[1], param[2], param[3])
+    def worker_process_data_function(self, param):
+        self.process_data(param[0], param[1], param[2], param[3])
 
-    def worker_store_function(self, param):
-        self.store_data_process(param[0], param[1], param[2])
-
-    def worker_collect(self):
+    def worker_process_data(self):
         while True:
-            param = self.qcollect.get()
-            self.worker_collect_function(param)
-            self.qcollect.task_done()
+            param = self.qworker.get()
+            self.worker_process_data_function(param)
+            self.qworker.task_done()
 
-    def worker_store(self):
-        while True:
-            param = self.qstore.get()
-            self.worker_store_function(param)
-            self.qstore.task_done()
 
 
 
@@ -198,12 +173,31 @@ if __name__ == '__main__':
 
     path_user = arg[1]
     path_product = arg[2]
+
+    # Check File User
+    try:
+        file_user = open(path_user, 'r')
+        file_user.close()
+    except:
+        print("No such file user : '%s'" %(path_user))
+        exit()
+    # Check File Product
+    try:
+        file_product = open(path_product, 'r')
+        file_product.close()
+    except:
+        print("No such file product : '%s'" %(path_product))
+        exit()
+
+    # Info file
+    print("path_user    : %s" %(path_user))
+    print("path_product : %s" %(path_product))
     
     # Configuration Database and process
     dir_db = './db/'
     path_metadata_db = "%s/metadata.db" % (dir_db)
     total_shard = 10
-    max_data_process = 1000
+    max_user_process = 1000
     total_worker = 50
     build_path_data_connection(dir_db, total_shard)
 
@@ -223,16 +217,11 @@ if __name__ == '__main__':
             os.remove(path_metadata_db)
         remove_path_data_connection()
 
-    # Open the connection
-    open_data_connection()
-    print("path_user    : %s" %(path_user))
-    print("path_product : %s" %(path_product))
-
     if(is_already_init == False):
         init_data_connection()
         print("Please wait on loading top 5 recomendation products")
-        init_data = InitTopProduct(total_worker)
-        init_data.initialize(path_user, path_product, path_metadata_db, total_shard, max_data_process)
+        init_data = InitTopProduct(total_shard, total_worker, max_user_process)
+        init_data.initialize(path_user, path_product, path_metadata_db)
         print("top 5 recomendation successfully created")
     else:
         print("top 5 recomendation already created")
@@ -248,14 +237,14 @@ if __name__ == '__main__':
             except:
                 print("'error' please input numeric value")
                 continue
-            top5_product = get_data_connection(uid, total_shard).get_top5_product(uid)
-            data_json = get_data_connection(uid, total_shard).get_json_product(uid)
+            conn = DatabaseTopProduct(get_path_data_connection(uid, total_shard))
+            top5_product = conn.get_top5_product(uid)
+            print(conn.get_json_product(uid))
             if(top5_product == None):
                 print("sorry we couldn't found user %s" %(uid))
             else:
                 print("recomended product for user %s are : " %(uid))
                 for p in top5_product.split(","):
                     print(p)
-
-    close_data_connection()
+            conn.close()
 
