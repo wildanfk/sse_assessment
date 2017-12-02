@@ -239,7 +239,6 @@ if __name__ == '__main__':
                 continue
             conn = DatabaseTopProduct(get_path_data_connection(uid, total_shard))
             top5_product = conn.get_top5_product(uid)
-            print(conn.get_json_product(uid))
             if(top5_product == None):
                 print("sorry we couldn't found user %s" %(uid))
             else:
